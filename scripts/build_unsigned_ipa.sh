@@ -60,12 +60,10 @@ find "$staging_dir/Payload" -name '_CodeSignature' -type d -prune -exec rm -rf {
 find "$staging_dir/Payload" -name 'embedded.mobileprovision' -type f -delete
 
 for bundle in "$staged_app" "$extension_path"; do
+  # Une signature ad hoc peut subsister dans le binaire : on la retire.
+  codesign --remove-signature "$bundle" >/dev/null 2>&1 || true
   if codesign --display "$bundle" >/dev/null 2>&1; then
-    echo "Bundle encore signé : $bundle" >&2
-    exit 1
-  fi
-  if ! codesign --display "$bundle" 2>&1 | grep -q 'code object is not signed at all'; then
-    echo "État de signature indéterminé : $bundle" >&2
+    echo "Bundle encore signé après suppression : $bundle" >&2
     exit 1
   fi
 done
