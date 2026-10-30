@@ -1,0 +1,54 @@
+name: IPA non signée
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - 'scripts/**'
+      - 'config/**'
+      - '.github/workflows/ipa.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ipa:
+    name: Compiler l'IPA
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - name: Installer xcodeproj
+        run: gem install xcodeproj --no-document
+      - name: Compiler l'IPA non signée
+        run: bash scripts/build_unsigned_ipa.sh
+        env:
+          BIRTHDAYS_BUILD: ${{ github.run_number }}
+      - name: Publier l'IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Birthdays-ipa-unsigned-${{ github.run_number }}
+          path: |
+            artifacts/ios/Birthdays.ipa
+            artifacts/ios/SHA256SUMS.txt
+            artifacts/ios/build-info.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Journal de compilation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Birthdays-build-log-${{ github.run_number }}
+          path: artifacts/ios/build.log
+          if-no-files-found: warn
+          retention-days: 7
